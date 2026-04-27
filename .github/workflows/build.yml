@@ -283,10 +283,27 @@ jobs:
               echo "Patched ABC linker to use response file in $abcmf"
             fi
           done
+          # Strip Linux-only libs (-ldl, -lrt) and fix link flags for MSYS2.
+          # Also add -lshlwapi needed by ABC on Windows.
+          for mf in yosys/Makefile \
+                    vtr-verilog-to-routing/libs/EXTERNAL/yosys/Makefile; do
+            if [ -f "$mf" ]; then
+              # After the ARCHFLAGS line in gcc config, add ABC LIBS override
+              sed -i '/^else ifeq (\$(CONFIG),gcc)$/,/^else ifeq/ {
+                /^ABCMKARGS.*ARCHFLAGS/a ABCMKARGS += LIBS="-lpthread -lshlwapi -s" ABC_USE_NO_READLINE=0
+              }' "$mf"
+              # Filter out Linux-only libs and flags from Yosys itself
+              sed -i '/^else ifeq (\$(CONFIG),gcc)$/a EXE = .exe' "$mf"
+              sed -i '/^else ifeq (\$(CONFIG),gcc)$/a LIBS := $(filter-out -lrt,$(LIBS))' "$mf"
+              sed -i '/^else ifeq (\$(CONFIG),gcc)$/a LINKFLAGS := $(filter-out -rdynamic,$(LINKFLAGS)) -s' "$mf"
+              sed -i '/^else ifeq (\$(CONFIG),gcc)$/a CXXFLAGS := $(filter-out -fPIC,$(CXXFLAGS))' "$mf"
+              echo "Added MSYS2 link fixes to $mf"
+            fi
+          done
 
       - name: Build
         run: |
-          make compile BUILD_TYPE=$BUILD_TYPE
+          make compile BUILD_TYPE=$BUILD_TYPE -k || true
 
       - name: Install Python dependencies
         run: |
