@@ -115,7 +115,7 @@ jobs:
   win_build:
     if: false # TEMP: Windows-only CI testing
     needs: yosys-win-vs-prep
-    name: ${{ matrix.config.name }}
+    name: "DISABLED - win_build"
     runs-on: windows-latest
     # Note: dependencies are installed in the container. See details about dependency list in docker/Dockerfile.master
     # Comment the line out when base image is built again
@@ -243,6 +243,10 @@ jobs:
           python3 --version
           swig -version
 
+      - name: Checkout submodules
+        run: |
+          make checkout
+
       - name: Patch CaDiCaL for MinGW compatibility
         run: |
           # MinGW defines _WIN32 but not WIN32. CaDiCaL's file.hpp uses
@@ -253,12 +257,14 @@ jobs:
             if [ -f "$f" ]; then
               sed -i 's/^#ifdef WIN32/#if defined(WIN32) || defined(_WIN32)/' "$f"
               echo "Patched $f"
+            else
+              echo "WARNING: $f not found"
             fi
           done
 
       - name: Build
         run: |
-          make all BUILD_TYPE=$BUILD_TYPE
+          make compile BUILD_TYPE=$BUILD_TYPE
 
       - name: Install Python dependencies
         run: |
@@ -289,7 +295,7 @@ jobs:
   linux_build:
     needs: change_detect
     if: false # TEMP: Windows-only CI testing
-    name: ${{ matrix.config.name }}
+    name: "DISABLED - linux_build"
     runs-on: ubuntu-22.04
     # Note: dependencies are installed in the container. See details about dependency list in docker/Dockerfile.master
     # Comment the line out when base image is built again
@@ -366,7 +372,7 @@ jobs:
   linux_build_opt:
     needs: change_detect
     if: false # TEMP: Windows-only CI testing
-    name: ${{ matrix.config.name }}
+    name: "DISABLED - linux_build_opt"
     runs-on: ubuntu-22.04
     # Note: dependencies are installed in the container. See details about dependency list in docker/Dockerfile.master
     # Comment the line out when base image is built again
@@ -432,7 +438,7 @@ jobs:
   centos_support:
     needs: change_detect
     if: false # TEMP: Windows-only CI testing
-    name: ${{ matrix.config.name }}
+    name: "DISABLED - centos_support"
     runs-on: ubuntu-22.04
     container: ${{ matrix.config.docker_image }}
     strategy:
@@ -473,7 +479,7 @@ jobs:
   ubuntu_support:
     needs: change_detect
     if: false # TEMP: Windows-only CI testing
-    name: ${{ matrix.config.name }}
+    name: "DISABLED - ubuntu_support"
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -525,7 +531,7 @@ jobs:
     if: false # TEMP: Windows-only CI testing
     # Prevents from running on forks where no custom runners are available
     #if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }} && ${{ github.repository_owner == 'lnis-uofu' }}
-    name: ${{ matrix.config.name }}
+    name: "DISABLED - debug_build"
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -577,7 +583,7 @@ jobs:
   no_warning_build:
     needs: change_detect
     if: false # TEMP: Windows-only CI testing
-    name: ${{ matrix.config.name }}
+    name: "DISABLED - no_warning_build"
     runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
@@ -628,7 +634,7 @@ jobs:
   linux_installer:
     needs: change_detect
     if: false # TEMP: Windows-only CI testing
-    name: ${{ matrix.config.name }}
+    name: "DISABLED - linux_installer"
     runs-on: ubuntu-22.04
     # Note: dependencies are installed in the container. See details about dependency list in docker/Dockerfile.master
     # Comment the line out when base image is built again
