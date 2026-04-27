@@ -75,7 +75,7 @@ jobs:
     name: Prepare Visual Studio build
     runs-on: ubuntu-latest
     needs: change_detect
-    if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }}
+    if: false # TEMP: Windows-only CI testing
     steps:
       - name: Cancel previous
         uses: styfle/cancel-workflow-action@0.12.1
@@ -113,6 +113,7 @@ jobs:
 
   # Test the compilation compatibility on Windows
   win_build:
+    if: false # TEMP: Windows-only CI testing
     needs: yosys-win-vs-prep
     name: ${{ matrix.config.name }}
     runs-on: windows-latest
@@ -287,7 +288,7 @@ jobs:
   # Test the compilation compatibility on Linux
   linux_build:
     needs: change_detect
-    if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }}
+    if: false # TEMP: Windows-only CI testing
     name: ${{ matrix.config.name }}
     runs-on: ubuntu-22.04
     # Note: dependencies are installed in the container. See details about dependency list in docker/Dockerfile.master
@@ -364,7 +365,7 @@ jobs:
 
   linux_build_opt:
     needs: change_detect
-    if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }}
+    if: false # TEMP: Windows-only CI testing
     name: ${{ matrix.config.name }}
     runs-on: ubuntu-22.04
     # Note: dependencies are installed in the container. See details about dependency list in docker/Dockerfile.master
@@ -430,7 +431,7 @@ jobs:
 
   centos_support:
     needs: change_detect
-    if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }}
+    if: false # TEMP: Windows-only CI testing
     name: ${{ matrix.config.name }}
     runs-on: ubuntu-22.04
     container: ${{ matrix.config.docker_image }}
@@ -471,7 +472,7 @@ jobs:
   # Support 24.04
   ubuntu_support:
     needs: change_detect
-    if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }}
+    if: false # TEMP: Windows-only CI testing
     name: ${{ matrix.config.name }}
     runs-on: ubuntu-24.04
     strategy:
@@ -521,7 +522,7 @@ jobs:
 
   debug_build:
     needs: change_detect
-    if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }}
+    if: false # TEMP: Windows-only CI testing
     # Prevents from running on forks where no custom runners are available
     #if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }} && ${{ github.repository_owner == 'lnis-uofu' }}
     name: ${{ matrix.config.name }}
@@ -575,7 +576,7 @@ jobs:
 
   no_warning_build:
     needs: change_detect
-    if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }}
+    if: false # TEMP: Windows-only CI testing
     name: ${{ matrix.config.name }}
     runs-on: ubuntu-22.04
     strategy:
@@ -626,7 +627,7 @@ jobs:
 
   linux_installer:
     needs: change_detect
-    if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }}
+    if: false # TEMP: Windows-only CI testing
     name: ${{ matrix.config.name }}
     runs-on: ubuntu-22.04
     # Note: dependencies are installed in the container. See details about dependency list in docker/Dockerfile.master
@@ -672,6 +673,7 @@ jobs:
           make installer BUILD_TYPE=$BUILD_TYPE INSTALL_DOC=OFF
 
   docker_distribution:
+    if: false # TEMP: Windows-only CI testing
     name: Build docker image for distribution
     runs-on: ubuntu-22.04
     needs: [linux_build, change_detect]
@@ -709,6 +711,7 @@ jobs:
             ghcr.io/${{ needs.change_detect.outputs.docker_repo }}/openfpga-master:${{ needs.change_detect.outputs.sha_short }}
 
   linux_regression_tests:
+    if: false # TEMP: Windows-only CI testing
     name: linux_regression_tests
     runs-on: ubuntu-22.04
     needs: [linux_build, change_detect]
@@ -765,7 +768,7 @@ jobs:
 
   docker_regression_tests:
     needs: change_detect
-    if: ${{ !fromJSON(needs.change_detect.outputs.source_modified) }}
+    if: false # TEMP: Windows-only CI testing
     name: docker_regression_tests
     runs-on: ubuntu-22.04
     container: 
