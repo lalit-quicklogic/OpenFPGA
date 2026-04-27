@@ -251,12 +251,14 @@ jobs:
         run: |
           # MinGW defines _WIN32 but not WIN32. CaDiCaL's file.hpp uses
           # #ifdef WIN32 to guard against getc_unlocked/putc_unlocked which
-          # are POSIX-only. Fix both copies (yosys/abc and vtr's abc).
+          # are POSIX-only. Patch all copies to also check _WIN32.
+          # Use grep to verify, and handle potential CRLF line endings.
           for f in yosys/abc/src/sat/cadical/file.hpp \
                    vtr-verilog-to-routing/libs/EXTERNAL/yosys/abc/src/sat/cadical/file.hpp; do
             if [ -f "$f" ]; then
-              sed -i 's/^#ifdef WIN32/#if defined(WIN32) || defined(_WIN32)/' "$f"
+              sed -i 's/#ifdef WIN32/#if defined(WIN32) || defined(_WIN32)/' "$f"
               echo "Patched $f"
+              grep -n 'defined(WIN32)' "$f" || echo "WARNING: patch verification failed for $f"
             else
               echo "WARNING: $f not found"
             fi
