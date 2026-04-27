@@ -303,7 +303,7 @@ jobs:
 
       - name: Build
         run: |
-          make compile BUILD_TYPE=$BUILD_TYPE -k || true
+          make compile BUILD_TYPE=$BUILD_TYPE -k
 
       - name: Install Python dependencies
         run: |

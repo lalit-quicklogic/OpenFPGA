@@ -590,6 +590,10 @@ def create_yosys_params():
 
     for indx in range(0, len(OpenFPGAArgs), 2):
         tmpVar = OpenFPGAArgs[indx][2:].upper()
+        if indx + 1 >= len(OpenFPGAArgs):
+            logger.error("OpenFPGAArgs has odd number of elements: %s" % OpenFPGAArgs)
+            logger.error("Unpaired argument at index %d: %s" % (indx, OpenFPGAArgs[indx]))
+            break
         ys_params[tmpVar] = OpenFPGAArgs[indx + 1]
 
     if not args.verific:
@@ -891,6 +895,10 @@ def run_openfpga_shell():
 
     for indx in range(0, len(OpenFPGAArgs), 2):
         tmpVar = OpenFPGAArgs[indx][2:].upper()
+        if indx + 1 >= len(OpenFPGAArgs):
+            logger.error("OpenFPGAArgs has odd number of elements: %s" % OpenFPGAArgs)
+            logger.error("Unpaired argument at index %d: %s" % (indx, OpenFPGAArgs[indx]))
+            break
         path_variables[tmpVar] = OpenFPGAArgs[indx + 1]
 
     with open(args.top_module + "_run.openfpga", "w", encoding="utf-8") as archfile:
