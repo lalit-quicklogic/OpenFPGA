@@ -171,7 +171,7 @@ def remove_run_dir():
     try:
         for eachdir in remove_dir:
             logger.info("Removing run_dir %s" % (eachdir))
-            if os.path.exists("latest"):
+            if os.path.islink("latest"):
                 if eachdir == os.readlink("latest"):
                     remove_dir += ["latest"]
             shutil.rmtree(eachdir, ignore_errors=True)
@@ -187,7 +187,12 @@ def generate_each_task_actions(taskname):
     # Check if task directory exists and consistent
     local_tasks = os.path.join(*(taskname))
     repo_tasks = os.path.join(gc["task_dir"], *(taskname))
-    abs_tasks = os.path.abspath("/" + local_tasks)
+    # On Windows, prepending "/" resolves to the drive root (e.g. C:\),
+    # which is not the intended behavior. Only use this on POSIX systems.
+    if sys.platform == "win32":
+        abs_tasks = os.path.abspath(local_tasks)
+    else:
+        abs_tasks = os.path.abspath("/" + local_tasks)
     if os.path.isdir(local_tasks):
         os.chdir(local_tasks)
         curr_task_dir = os.path.abspath(os.getcwd())

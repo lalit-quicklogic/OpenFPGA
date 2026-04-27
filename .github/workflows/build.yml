@@ -195,6 +195,81 @@ jobs:
           cmake ${{ steps.vcpkg.outputs.vcpkg-cmake-config }} -S .. -B . -DOPENFPGA_WITH_SWIG=OFF -DWITH_ABC=OFF -DTCL_LIBRARY=${{ steps.setup_tcl.outputs.TCL_DIR }}\lib\tcl86.lib -DTCL_INCLUDE_DIR=${{ steps.setup_tcl.outputs.TCL_DIR }}\include
 
 
+  # Test the compilation compatibility on Windows using MSYS2 MinGW64
+  win_build_msys2:
+    needs: change_detect
+    if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }}
+    name: "Build Compatibility: MSYS2 MinGW64 (Windows-latest)"
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - name: Cancel previous
+        uses: styfle/cancel-workflow-action@0.12.1
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-tcl
+            mingw-w64-x86_64-tk
+            mingw-w64-x86_64-readline
+            mingw-w64-x86_64-swig
+            mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-python-pip
+            flex
+            bison
+            make
+            git
+
+      - name: Checkout OpenFPGA repo
+        uses: actions/checkout@v4
+
+      - name: Dump tool versions
+        run: |
+          cmake --version
+          gcc --version
+          g++ --version
+          python3 --version
+          swig -version
+
+      - name: Build
+        run: |
+          make all BUILD_TYPE=$BUILD_TYPE
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --break-system-packages -r requirements.txt
+
+      - name: Quick Test
+        run: |
+          source openfpga.sh && run-task compilation_verification --debug --show_thread_logs
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openfpga-msys2
+          path: |
+            build/vtr-verilog-to-routing/abc/abc
+            build/vtr-verilog-to-routing/abc/libabc.a
+            build/vtr-verilog-to-routing/ace2/ace
+            build/vtr-verilog-to-routing/vpr/libvpr.a
+            build/vtr-verilog-to-routing/vpr/vpr
+            build/openfpga/libopenfpga.a
+            build/openfpga/openfpga
+            build/yosys/share
+            build/yosys/bin
+            openfpga_flow
+            openfpga.sh
+
   # Test the compilation compatibility on Linux
   linux_build:
     needs: change_detect
@@ -721,3 +796,72 @@ jobs:
           name: failed_${{matrix.config.name}}_regression_log
           retention-days: 1
           path: openfpga_flow/**/*.log
+
+  # Regression tests on Windows using MSYS2 MinGW64
+  win_msys2_regression_tests:
+    name: win_msys2_regression_tests
+    runs-on: windows-latest
+    needs: [win_build_msys2, change_detect]
+    defaults:
+      run:
+        shell: msys2 {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: basic_reg_test
+          - name: fpga_bitstream_reg_test
+    steps:
+      - name: Cancel previous
+        uses: styfle/cancel-workflow-action@0.12.1
+        with:
+          access_token: ${{ github.token }}
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          install: >-
+            mingw-w64-x86_64-python
+            mingw-w64-x86_64-python-pip
+            mingw-w64-x86_64-tcl
+            make
+            git
+
+      - name: Checkout OpenFPGA repo
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: openfpga-msys2
+
+      - name: Set executable permissions
+        run: |
+          chmod +x build/vtr-verilog-to-routing/abc/abc
+          chmod +x build/vtr-verilog-to-routing/ace2/ace
+          chmod +x build/vtr-verilog-to-routing/vpr/vpr
+          chmod +x build/openfpga/openfpga
+          chmod +x build/yosys/bin/yosys
+          chmod +x build/yosys/bin/yosys-abc
+          chmod +x build/yosys/bin/yosys-config
+          chmod +x build/yosys/bin/yosys-filterlib
+          chmod +x build/yosys/bin/yosys-smtbmc
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --break-system-packages -r requirements.txt
+
+      - name: ${{matrix.config.name}}_MSYS2_MinGW64_(Windows-latest)
+        run: |
+          source openfpga.sh && source openfpga_flow/regression_test_scripts/${{matrix.config.name}}.sh --debug --show_thread_logs
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        if: ${{ failure() }}
+        with:
+          name: failed_${{matrix.config.name}}_msys2_regression_log
+          retention-days: 1
+          path: |
+            openfpga_flow/**/*.log

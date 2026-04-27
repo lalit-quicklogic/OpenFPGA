@@ -326,7 +326,9 @@ endif()
 
 # we will check if yosys already exist. if not then build it
 if (OPENFPGA_WITH_YOSYS)
-    if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/yosys/bin/yosys)
+    # On Windows/MSYS2, the binary has a .exe extension
+    if(EXISTS ${CMAKE_CURRENT_BINARY_DIR}/yosys/bin/yosys OR
+       EXISTS ${CMAKE_CURRENT_BINARY_DIR}/yosys/bin/yosys.exe)
         message(STATUS "Yosys pre-build exist so skipping it")
     else ()
         # run makefile provided, we pass-on the options to the local make file 
