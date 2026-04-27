@@ -260,7 +260,7 @@ jobs:
               sed -i '/^else ifeq (\$(CONFIG),gcc)$/,/^else ifeq/ {
                 s|ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H \$(ABC_ARCHFLAGS)"|ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H -DWIN32_NO_DLL -DWIN32 -DHAVE_STRUCT_TIMESPEC -fpermissive -w \$(ABC_ARCHFLAGS)"|
               }' "$mf"
-              echo "Patched $mf"
+              echo "Patched ARCHFLAGS in $mf"
             fi
           done
           # Also fix Yosys CXXFLAGS/LINKFLAGS/LIBS for MinGW
@@ -271,6 +271,16 @@ jobs:
                 /^CXXFLAGS += -std=/ s|$| -D_POSIX_SOURCE -DYOSYS_WIN32_UNIX_DIR|
               }' "$mf"
               echo "Added MSYS2 CXXFLAGS to $mf"
+            fi
+          done
+          # Fix "Argument list too long" when linking ABC on Windows.
+          # ABC's Makefile passes all .o files on the command line which
+          # exceeds Windows' ~32K limit. Use a response file instead.
+          for abcmf in yosys/abc/Makefile \
+                       vtr-verilog-to-routing/libs/EXTERNAL/yosys/abc/Makefile; do
+            if [ -f "$abcmf" ]; then
+              sed -i 's|$(VERBOSE)$(LD) -o $@ $^ $(LDFLAGS) $(LIBS)|$(VERBOSE)echo $^ > abc_link.rsp \&\& $(LD) -o $@ @abc_link.rsp $(LDFLAGS) $(LIBS)|' "$abcmf"
+              echo "Patched ABC linker to use response file in $abcmf"
             fi
           done
 
