@@ -249,55 +249,46 @@ jobs:
 
       - name: Patch Yosys for native MSYS2/MinGW build
         run: |
-          # The Yosys Makefile 'config-gcc' doesn't add -DWIN32 to ABC's
-          # ARCHFLAGS, so CaDiCaL code fails (uses POSIX-only headers/functions).
-          # The 'config-msys2-64' has these flags but uses cross-compilers.
-          # Fix: inject the needed WIN32 defines into the gcc config section
-          # of Yosys Makefile, and also into VTR's copy.
-          for mf in yosys/Makefile \
-                    vtr-verilog-to-routing/libs/EXTERNAL/yosys/Makefile; do
-            if [ -f "$mf" ]; then
-              sed -i '/^else ifeq (\$(CONFIG),gcc)$/,/^else ifeq/ {
-                s|ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H \$(ABC_ARCHFLAGS)"|ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H -DWIN32_NO_DLL -DWIN32 -DHAVE_STRUCT_TIMESPEC -fpermissive -w \$(ABC_ARCHFLAGS)"|
-              }' "$mf"
-              echo "Patched ARCHFLAGS in $mf"
-            fi
-          done
-          # Also fix Yosys CXXFLAGS/LINKFLAGS/LIBS for MinGW
-          for mf in yosys/Makefile \
-                    vtr-verilog-to-routing/libs/EXTERNAL/yosys/Makefile; do
-            if [ -f "$mf" ]; then
-              sed -i '/^else ifeq (\$(CONFIG),gcc)$/,/^else ifeq/ {
-                /^CXXFLAGS += -std=/ s|$| -D_POSIX_SOURCE -DYOSYS_WIN32_UNIX_DIR|
-              }' "$mf"
-              echo "Added MSYS2 CXXFLAGS to $mf"
-            fi
-          done
+          # Use Python for reliable Makefile patching (sed range patterns are fragile)
+          python3 << 'PYEOF'
+          import os
+          for mf in ['yosys/Makefile', 'vtr-verilog-to-routing/libs/EXTERNAL/yosys/Makefile']:
+              if not os.path.isfile(mf):
+                  print(f'WARNING: {mf} not found')
+                  continue
+              with open(mf) as f:
+                  content = f.read()
+              old_gcc = (
+                  'else ifeq ($(CONFIG),gcc)\n'
+                  'CXX = g++\n'
+                  'CXXFLAGS += -std=$(CXXSTD) $(OPT_LEVEL)\n'
+                  'ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H $(ABC_ARCHFLAGS)"'
+              )
+              new_gcc = (
+                  'else ifeq ($(CONFIG),gcc)\n'
+                  'CXX = g++\n'
+                  'CXXFLAGS += -std=$(CXXSTD) $(OPT_LEVEL) -D_POSIX_SOURCE -DYOSYS_WIN32_UNIX_DIR\n'
+                  'CXXFLAGS := $(filter-out -fPIC,$(CXXFLAGS))\n'
+                  'LINKFLAGS := $(filter-out -rdynamic,$(LINKFLAGS)) -s\n'
+                  'LIBS := $(filter-out -lrt,$(LIBS))\n'
+                  'ABCMKARGS += ARCHFLAGS="-DABC_USE_STDINT_H -DWIN32_NO_DLL -DWIN32 -DHAVE_STRUCT_TIMESPEC -fpermissive -w $(ABC_ARCHFLAGS)"\n'
+                  'ABCMKARGS += LIBS="-lpthread -lshlwapi -s" ABC_USE_NO_READLINE=0\n'
+                  'EXE = .exe'
+              )
+              if old_gcc in content:
+                  content = content.replace(old_gcc, new_gcc, 1)
+                  with open(mf, 'w') as f:
+                      f.write(content)
+                  print(f'Patched {mf}')
+              else:
+                  print(f'WARNING: gcc config pattern not found in {mf}')
+          PYEOF
           # Fix "Argument list too long" when linking ABC on Windows.
-          # ABC's Makefile passes all .o files on the command line which
-          # exceeds Windows' ~32K limit. Use a response file instead.
           for abcmf in yosys/abc/Makefile \
                        vtr-verilog-to-routing/libs/EXTERNAL/yosys/abc/Makefile; do
             if [ -f "$abcmf" ]; then
               sed -i 's|$(VERBOSE)$(LD) -o $@ $^ $(LDFLAGS) $(LIBS)|$(VERBOSE)echo $^ > abc_link.rsp \&\& $(LD) -o $@ @abc_link.rsp $(LDFLAGS) $(LIBS)|' "$abcmf"
-              echo "Patched ABC linker to use response file in $abcmf"
-            fi
-          done
-          # Strip Linux-only libs (-ldl, -lrt) and fix link flags for MSYS2.
-          # Also add -lshlwapi needed by ABC on Windows.
-          for mf in yosys/Makefile \
-                    vtr-verilog-to-routing/libs/EXTERNAL/yosys/Makefile; do
-            if [ -f "$mf" ]; then
-              # After the ARCHFLAGS line in gcc config, add ABC LIBS override
-              sed -i '/^else ifeq (\$(CONFIG),gcc)$/,/^else ifeq/ {
-                /^ABCMKARGS.*ARCHFLAGS/a ABCMKARGS += LIBS="-lpthread -lshlwapi -s" ABC_USE_NO_READLINE=0
-              }' "$mf"
-              # Filter out Linux-only libs and flags from Yosys itself
-              sed -i '/^else ifeq (\$(CONFIG),gcc)$/a EXE = .exe' "$mf"
-              sed -i '/^else ifeq (\$(CONFIG),gcc)$/a LIBS := $(filter-out -lrt,$(LIBS))' "$mf"
-              sed -i '/^else ifeq (\$(CONFIG),gcc)$/a LINKFLAGS := $(filter-out -rdynamic,$(LINKFLAGS)) -s' "$mf"
-              sed -i '/^else ifeq (\$(CONFIG),gcc)$/a CXXFLAGS := $(filter-out -fPIC,$(CXXFLAGS))' "$mf"
-              echo "Added MSYS2 link fixes to $mf"
+              echo "Patched ABC linker in $abcmf"
             fi
           done
 
