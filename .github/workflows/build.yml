@@ -294,6 +294,12 @@ jobs:
 
       - name: Build
         run: |
+          # Pass WIN32 flags to CMake for VTR's ABC (built via CMake, not Yosys Makefile)
+          # -DHAVE_STRUCT_TIMESPEC: prevent pthread.h from redefining struct timespec
+          # -DWIN32: enable Windows code paths in CaDiCaL and other ABC code
+          # -fpermissive -w: suppress pointer-to-int cast errors in ABC headers
+          export CFLAGS="${CFLAGS} -DHAVE_STRUCT_TIMESPEC -DWIN32 -fpermissive -w"
+          export CXXFLAGS="${CXXFLAGS} -DHAVE_STRUCT_TIMESPEC -DWIN32 -fpermissive -w"
           make compile BUILD_TYPE=$BUILD_TYPE -k
 
       - name: Install Python dependencies
