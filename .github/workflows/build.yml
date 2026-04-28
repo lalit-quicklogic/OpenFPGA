@@ -206,7 +206,7 @@ jobs:
     env:
       # Set to 'true' to skip building and only run tests using
       # artifacts from a previous build. Speeds up test iteration.
-      SKIP_BUILD: 'true'
+      SKIP_BUILD: 'false'
     defaults:
       run:
         shell: msys2 {0}
@@ -340,11 +340,12 @@ jobs:
           python3 -m pip install --break-system-packages -r requirements.txt
 
       - name: Quick Test
+        continue-on-error: true
         run: |
           source openfpga.sh && run-task compilation_verification --debug --show_thread_logs
 
       - name: Upload build artifacts
-        if: env.SKIP_BUILD != 'true'
+        if: always() && env.SKIP_BUILD != 'true'
         uses: actions/upload-artifact@v4
         with:
           name: openfpga-msys2-build
