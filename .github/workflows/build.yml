@@ -206,7 +206,7 @@ jobs:
     env:
       # Set to 'true' to skip building and only run tests using
       # artifacts from a previous build. Speeds up test iteration.
-      SKIP_BUILD: 'false'
+      SKIP_BUILD: 'true'
     defaults:
       run:
         shell: msys2 {0}
@@ -232,6 +232,7 @@ jobs:
             mingw-w64-x86_64-capnproto
             mingw-w64-x86_64-python
             mingw-w64-x86_64-python-pip
+            mingw-w64-x86_64-iverilog
             flex
             bison
             make
