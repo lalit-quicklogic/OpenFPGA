@@ -300,6 +300,15 @@ jobs:
             echo "Copied FlexLexer.h to /mingw64/include/"
           fi
 
+          # Patch yosys-slang FindYosys.cmake to run yosys-config via bash.
+          # yosys-config is a bash script; CMake execute_process on Windows
+          # cannot run it directly ("inappropriate file type or format").
+          findyosys="yosys-slang/cmake/FindYosys.cmake"
+          if [ -f "$findyosys" ]; then
+            sed -i 's|COMMAND ${YOSYS_CONFIG}|COMMAND bash ${YOSYS_CONFIG}|g' "$findyosys"
+            echo "Patched $findyosys to use bash"
+          fi
+
       - name: Build
         run: |
           # Disable VTR's ABC (matches MSVC CI). ABC is only needed through
