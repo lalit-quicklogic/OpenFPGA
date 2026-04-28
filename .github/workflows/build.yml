@@ -223,8 +223,8 @@ jobs:
             mingw-w64-x86_64-tcl
             mingw-w64-x86_64-tk
             mingw-w64-x86_64-readline
-            mingw-w64-x86_64-swig
             mingw-w64-x86_64-zlib
+            mingw-w64-x86_64-capnproto
             mingw-w64-x86_64-python
             mingw-w64-x86_64-python-pip
             flex
@@ -241,7 +241,6 @@ jobs:
           gcc --version
           g++ --version
           python3 --version
-          swig -version
 
       - name: Checkout submodules
         run: |
@@ -292,15 +291,20 @@ jobs:
             fi
           done
 
+          # Copy FlexLexer.h to MinGW include path.
+          # MSYS2 flex package installs it to /usr/include, but the MinGW
+          # compiler only searches /mingw64/include.
+          if [ -f /usr/include/FlexLexer.h ] && [ ! -f /mingw64/include/FlexLexer.h ]; then
+            cp /usr/include/FlexLexer.h /mingw64/include/FlexLexer.h
+            echo "Copied FlexLexer.h to /mingw64/include/"
+          fi
+
       - name: Build
         run: |
-          # Pass WIN32 flags to CMake for VTR's ABC (built via CMake, not Yosys Makefile)
-          # -DHAVE_STRUCT_TIMESPEC: prevent pthread.h from redefining struct timespec
-          # -DWIN32: enable Windows code paths in CaDiCaL and other ABC code
-          # -fpermissive -w: suppress pointer-to-int cast errors in ABC headers
-          export CFLAGS="${CFLAGS} -DHAVE_STRUCT_TIMESPEC -DWIN32 -fpermissive -w"
-          export CXXFLAGS="${CXXFLAGS} -DHAVE_STRUCT_TIMESPEC -DWIN32 -fpermissive -w"
-          make compile BUILD_TYPE=$BUILD_TYPE -k
+          # Disable VTR's ABC (matches MSVC CI). ABC is only needed through
+          # Yosys which builds its own copy with CONFIG=msys2-64 support.
+          # This avoids -ldl/-lrt linker errors and struct timespec conflicts.
+          make compile BUILD_TYPE=$BUILD_TYPE CMAKE_FLAGS="-DWITH_ABC=OFF -DOPENFPGA_WITH_SWIG=OFF" -k
 
       - name: Install Python dependencies
         run: |
