@@ -341,7 +341,9 @@ if (OPENFPGA_WITH_YOSYS)
             COMMENT "Compile Yosys with given Makefile"
         )
         # yosys compilation ends
-        # yosys-plugins compilation starts
+        # yosys-slang compilation starts
+        # Skip on Windows: slang shared library exceeds PE/COFF 65535 export limit
+        if(NOT WIN32)
         add_custom_target(
             yosys-slang ALL
             COMMAND $(MAKE) install YOSYS_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/yosys/bin/ CMAKE_FLAGS+="-DPASS_NAME=read_slang"
@@ -350,6 +352,7 @@ if (OPENFPGA_WITH_YOSYS)
             COMMENT "Compile Yosys-Slang with given Makefile"
         )
         add_dependencies(yosys-slang yosys)
+        endif()
 
         ## yosys-plugins compilation starts
         #if (OPENFPGA_WITH_YOSYS_PLUGIN)
