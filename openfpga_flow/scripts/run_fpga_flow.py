@@ -1069,4 +1069,23 @@ if __name__ == "__main__":
     ExecTime["Start"] = time.time()
     # args = parser.parse_args()
     args, OpenFPGAArgs = parser.parse_known_args()
+
+    # The "otherthings" positional arg (nargs="*") can greedily consume values
+    # that belong to unknown --options (e.g. --openfpga_sim_setting_file <path>).
+    # Merge any captured values back into OpenFPGAArgs so they pair correctly.
+    if getattr(args, "otherthings", None):
+        # Re-insert each orphaned value after the first unpaired --key
+        for val in args.otherthings:
+            inserted = False
+            for i in range(len(OpenFPGAArgs) - 1):
+                if OpenFPGAArgs[i].startswith("--") and (
+                    i + 1 >= len(OpenFPGAArgs) or OpenFPGAArgs[i + 1].startswith("--")
+                ):
+                    OpenFPGAArgs.insert(i + 1, val)
+                    inserted = True
+                    break
+            if not inserted:
+                OpenFPGAArgs.append(val)
+        args.otherthings = []
+
     main()
