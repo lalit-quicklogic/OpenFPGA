@@ -203,6 +203,10 @@ jobs:
     if: ${{ fromJSON(needs.change_detect.outputs.source_modified) }}
     name: "Build Compatibility: MSYS2 MinGW64 (Windows-latest)"
     runs-on: windows-latest
+    env:
+      # Set to 'true' to skip building and only run tests using
+      # artifacts from a previous build. Speeds up test iteration.
+      SKIP_BUILD: 'false'
     defaults:
       run:
         shell: msys2 {0}
@@ -244,10 +248,12 @@ jobs:
           python3 --version
 
       - name: Checkout submodules
+        if: env.SKIP_BUILD != 'true'
         run: |
           make checkout
 
       - name: Patch Yosys for native MSYS2/MinGW build
+        if: env.SKIP_BUILD != 'true'
         run: |
           # Use Python for reliable Makefile patching (sed range patterns are fragile)
           python3 << 'PYEOF'
@@ -310,11 +316,23 @@ jobs:
           fi
 
       - name: Build
+        if: env.SKIP_BUILD != 'true'
         run: |
           # Disable VTR's ABC (matches MSVC CI). ABC is only needed through
           # Yosys which builds its own copy with CONFIG=msys2-64 support.
           # This avoids -ldl/-lrt linker errors and struct timespec conflicts.
           make compile BUILD_TYPE=$BUILD_TYPE CMAKE_FLAGS="-DWITH_ABC=OFF -DOPENFPGA_WITH_SWIG=OFF" -k
+
+      - name: Download previous build (test-only mode)
+        if: env.SKIP_BUILD == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: openfpga-msys2-build
+
+      - name: Restore executable permissions (test-only mode)
+        if: env.SKIP_BUILD == 'true'
+        run: |
+          chmod -R +x build/openfpga/ build/vtr-verilog-to-routing/ build/yosys/ 2>/dev/null || true
 
       - name: Install Python dependencies
         run: |
@@ -324,22 +342,18 @@ jobs:
         run: |
           source openfpga.sh && run-task compilation_verification --debug --show_thread_logs
 
-      - name: Upload artifact
+      - name: Upload build artifacts
+        if: env.SKIP_BUILD != 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: openfpga-msys2
+          name: openfpga-msys2-build
+          retention-days: 3
           path: |
-            build/vtr-verilog-to-routing/abc/abc
-            build/vtr-verilog-to-routing/abc/libabc.a
-            build/vtr-verilog-to-routing/ace2/ace
-            build/vtr-verilog-to-routing/vpr/libvpr.a
-            build/vtr-verilog-to-routing/vpr/vpr
-            build/openfpga/libopenfpga.a
-            build/openfpga/openfpga
-            build/yosys/share
-            build/yosys/bin
-            openfpga_flow
-            openfpga.sh
+            build/openfpga/
+            build/vtr-verilog-to-routing/vpr/
+            build/vtr-verilog-to-routing/abc/
+            build/vtr-verilog-to-routing/ace2/
+            build/yosys/
 
   # Test the compilation compatibility on Linux
   linux_build:
@@ -908,7 +922,7 @@ jobs:
       - name: Download build artifacts
         uses: actions/download-artifact@v4
         with:
-          name: openfpga-msys2
+          name: openfpga-msys2-build
 
       - name: Set executable permissions
         run: |
