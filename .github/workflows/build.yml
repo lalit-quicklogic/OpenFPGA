@@ -248,13 +248,21 @@ jobs:
           g++ --version
           python3 --version
 
+      - name: Download previous build (test-only mode)
+        id: download_prev_build
+        if: env.SKIP_BUILD == 'true'
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: openfpga-msys2-build
+
       - name: Checkout submodules
-        if: env.SKIP_BUILD != 'true'
+        if: env.SKIP_BUILD != 'true' || steps.download_prev_build.outcome == 'failure'
         run: |
           make checkout
 
       - name: Patch Yosys for native MSYS2/MinGW build
-        if: env.SKIP_BUILD != 'true'
+        if: env.SKIP_BUILD != 'true' || steps.download_prev_build.outcome == 'failure'
         run: |
           # Use Python for reliable Makefile patching (sed range patterns are fragile)
           python3 << 'PYEOF'
@@ -317,21 +325,14 @@ jobs:
           fi
 
       - name: Build
-        if: env.SKIP_BUILD != 'true'
+        if: env.SKIP_BUILD != 'true' || steps.download_prev_build.outcome == 'failure'
         run: |
           # Disable VTR's ABC (matches MSVC CI). ABC is only needed through
           # Yosys which builds its own copy with CONFIG=msys2-64 support.
           # This avoids -ldl/-lrt linker errors and struct timespec conflicts.
           make compile BUILD_TYPE=$BUILD_TYPE CMAKE_FLAGS="-DWITH_ABC=OFF -DOPENFPGA_WITH_SWIG=OFF" -k
 
-      - name: Download previous build (test-only mode)
-        if: env.SKIP_BUILD == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: openfpga-msys2-build
-
-      - name: Restore executable permissions (test-only mode)
-        if: env.SKIP_BUILD == 'true'
+      - name: Restore executable permissions
         run: |
           chmod -R +x build/openfpga/ build/vtr-verilog-to-routing/ build/yosys/ 2>/dev/null || true
 
@@ -345,7 +346,7 @@ jobs:
           source openfpga.sh && run-task compilation_verification --debug --show_thread_logs
 
       - name: Upload build artifacts
-        if: always() && env.SKIP_BUILD != 'true'
+        if: always() && (env.SKIP_BUILD != 'true' || steps.download_prev_build.outcome == 'failure')
         uses: actions/upload-artifact@v4
         with:
           name: openfpga-msys2-build
