@@ -336,6 +336,26 @@ jobs:
         run: |
           chmod -R +x build/openfpga/ build/vtr-verilog-to-routing/ build/yosys/ 2>/dev/null || true
 
+      - name: Normalize executable names (Windows)
+        run: |
+          for f in \
+            build/openfpga/openfpga \
+            build/vtr-verilog-to-routing/vpr/vpr \
+            build/vtr-verilog-to-routing/ace2/ace \
+            build/vtr-verilog-to-routing/abc/abc \
+            build/yosys/bin/yosys \
+            build/yosys/bin/yosys-abc \
+            build/yosys/bin/yosys-config \
+            build/yosys/bin/yosys-filterlib \
+            build/yosys/bin/yosys-smtbmc; do
+            if [ ! -e "$f" ] && [ -e "$f.exe" ]; then
+              cp -f "$f.exe" "$f"
+            fi
+            if [ -e "$f" ]; then
+              chmod +x "$f"
+            fi
+          done
+
       - name: Install Python dependencies
         run: |
           python3 -m pip install --break-system-packages -r requirements.txt
@@ -947,6 +967,26 @@ jobs:
               chmod +x "$f"
             else
               echo "Skipping missing file: $f"
+            fi
+          done
+
+      - name: Normalize executable names (Windows)
+        run: |
+          for f in \
+            build/openfpga/openfpga \
+            build/vtr-verilog-to-routing/vpr/vpr \
+            build/vtr-verilog-to-routing/ace2/ace \
+            build/vtr-verilog-to-routing/abc/abc \
+            build/yosys/bin/yosys \
+            build/yosys/bin/yosys-abc \
+            build/yosys/bin/yosys-config \
+            build/yosys/bin/yosys-filterlib \
+            build/yosys/bin/yosys-smtbmc; do
+            if [ ! -e "$f" ] && [ -e "$f.exe" ]; then
+              cp -f "$f.exe" "$f"
+            fi
+            if [ -e "$f" ]; then
+              chmod +x "$f"
             fi
           done
 
