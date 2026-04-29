@@ -8,7 +8,11 @@ source openfpga.sh
 echo -e "Basic regression tests";
 
 echo -e "Check if openfpgashell can execute commands with -x option"
-${OPENFPGA_PATH}/build/openfpga/openfpga -x "version; exit;"
+OPENFPGA_SHELL_BIN="${OPENFPGA_PATH}/build/openfpga/openfpga"
+if [ ! -x "${OPENFPGA_SHELL_BIN}" ] && [ -x "${OPENFPGA_SHELL_BIN}.exe" ]; then
+  OPENFPGA_SHELL_BIN="${OPENFPGA_SHELL_BIN}.exe"
+fi
+${OPENFPGA_SHELL_BIN} -x "version; exit;"
 if [ $? -ne 0 ]; then
   echo "Error: openfpgashell execution with -x option failed"
   exit 1

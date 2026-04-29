@@ -256,6 +256,13 @@ jobs:
         with:
           name: openfpga-msys2-build
 
+      - name: Flatten downloaded artifact (test-only mode)
+        if: env.SKIP_BUILD == 'true' && steps.download_prev_build.outcome == 'success'
+        run: |
+          if [ -d openfpga-msys2-build ]; then
+            cp -a openfpga-msys2-build/. .
+          fi
+
       - name: Checkout submodules
         if: env.SKIP_BUILD != 'true' || steps.download_prev_build.outcome == 'failure'
         run: |
@@ -950,6 +957,12 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: openfpga-msys2-build
+
+      - name: Flatten downloaded artifact
+        run: |
+          if [ -d openfpga-msys2-build ]; then
+            cp -a openfpga-msys2-build/. .
+          fi
 
       - name: Set executable permissions
         run: |
