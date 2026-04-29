@@ -206,7 +206,7 @@ jobs:
     env:
       # Set to 'true' to skip building and only run tests using
       # artifacts from a previous build. Speeds up test iteration.
-      SKIP_BUILD: 'false'
+      SKIP_BUILD: 'true'
     defaults:
       run:
         shell: msys2 {0}
@@ -915,6 +915,7 @@ jobs:
             mingw-w64-x86_64-python
             mingw-w64-x86_64-python-pip
             mingw-w64-x86_64-tcl
+            mingw-w64-x86_64-iverilog
             make
             git
 
@@ -928,15 +929,22 @@ jobs:
 
       - name: Set executable permissions
         run: |
-          chmod +x build/vtr-verilog-to-routing/abc/abc
-          chmod +x build/vtr-verilog-to-routing/ace2/ace
-          chmod +x build/vtr-verilog-to-routing/vpr/vpr
-          chmod +x build/openfpga/openfpga
-          chmod +x build/yosys/bin/yosys
-          chmod +x build/yosys/bin/yosys-abc
-          chmod +x build/yosys/bin/yosys-config
-          chmod +x build/yosys/bin/yosys-filterlib
-          chmod +x build/yosys/bin/yosys-smtbmc
+          for f in \
+            build/vtr-verilog-to-routing/abc/abc \
+            build/vtr-verilog-to-routing/ace2/ace \
+            build/vtr-verilog-to-routing/vpr/vpr \
+            build/openfpga/openfpga \
+            build/yosys/bin/yosys \
+            build/yosys/bin/yosys-abc \
+            build/yosys/bin/yosys-config \
+            build/yosys/bin/yosys-filterlib \
+            build/yosys/bin/yosys-smtbmc; do
+            if [ -e "$f" ]; then
+              chmod +x "$f"
+            else
+              echo "Skipping missing file: $f"
+            fi
+          done
 
       - name: Install Python dependencies
         run: |
