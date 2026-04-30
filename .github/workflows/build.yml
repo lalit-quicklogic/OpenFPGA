@@ -255,13 +255,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: openfpga-msys2-build
-
-      - name: Flatten downloaded artifact (test-only mode)
-        if: env.SKIP_BUILD == 'true' && steps.download_prev_build.outcome == 'success'
-        run: |
-          if [ -d openfpga-msys2-build ]; then
-            cp -a openfpga-msys2-build/. .
-          fi
+          path: build
 
       - name: Checkout submodules
         if: env.SKIP_BUILD != 'true' || steps.download_prev_build.outcome == 'failure'
@@ -363,10 +357,17 @@ jobs:
             fi
           done
 
-      - name: Debug downloaded build tree
+      - name: Debug build tree
         run: |
-          echo "Listing candidate binaries under build/"
-          find build -maxdepth 4 -type f \( -name 'openfpga*' -o -name 'vpr*' -o -name 'ace*' -o -name 'yosys*' \) | sort || true
+          echo "=== Checking build/ directory ==="
+          if [ -d build ]; then
+            echo "build/ exists"
+            find build -maxdepth 4 -type f \( -name 'openfpga*' -o -name 'vpr*' -o -name 'ace*' -o -name 'yosys*' \) | sort || true
+          else
+            echo "WARNING: build/ directory does NOT exist"
+            echo "Listing workspace root:"
+            ls -la | head -n 30
+          fi
 
       - name: Install Python dependencies
         run: |
@@ -962,12 +963,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: openfpga-msys2-build
+          path: build
 
-      - name: Flatten downloaded artifact
+      - name: Verify artifact layout
         run: |
-          if [ -d openfpga-msys2-build ]; then
-            cp -a openfpga-msys2-build/. .
-          fi
+          echo "=== Checking build/ directory ==="
+          ls -la build/ 2>/dev/null || echo "build/ does not exist!"
+          find build -maxdepth 3 -type f \( -name 'openfpga*' -o -name 'vpr*' -o -name 'yosys*' \) | sort || true
 
       - name: Set executable permissions
         run: |

@@ -20,7 +20,6 @@ import argparse
 from configparser import ConfigParser, ExtendedInterpolation
 import logging
 from envyaml import EnvYAML
-import glob
 import subprocess
 import threading
 from string import Template
@@ -437,11 +436,7 @@ def read_script_config(default_tool_path):
 
 
 def resolve_executable_path(tool_path):
-    """Best-effort resolver for tool executables across Linux/MSYS2 Windows.
-
-    Handles common Windows suffixes and artifact layout differences by probing
-    direct path variants and then searching under OPENFPGA build tree.
-    """
+    """Try .exe suffix on Windows when the bare path does not exist."""
     if not tool_path:
         return tool_path
 
@@ -449,30 +444,12 @@ def resolve_executable_path(tool_path):
     if "/" not in tool_path and "\\" not in tool_path:
         return tool_path
 
-    candidates = [tool_path, tool_path + ".exe", tool_path + ".bat", tool_path + ".cmd"]
-    for candidate in candidates:
-        if os.path.isfile(candidate):
-            return candidate
+    if os.path.isfile(tool_path):
+        return tool_path
 
-    base_dir = os.path.dirname(tool_path)
-    base_name = os.path.basename(tool_path)
-    if os.path.isdir(base_dir):
-        for candidate in glob.glob(os.path.join(base_dir, base_name + "*")):
-            if os.path.isfile(candidate):
-                return candidate
-
-    # Last resort: find matching binary anywhere under build/.
-    build_root = os.path.join(script_env_vars["PATH"]["OPENFPGA_PATH"], "build")
-    if os.path.isdir(build_root):
-        for name in (base_name, base_name + ".exe"):
-            matches = glob.glob(os.path.join(build_root, "**", name), recursive=True)
-            if matches:
-                return matches[0]
-        # Prefix fallback (e.g. openfpga.exe, yosys-config.exe, versioned wrappers)
-        prefix_matches = glob.glob(os.path.join(build_root, "**", base_name + "*"), recursive=True)
-        for match in prefix_matches:
-            if os.path.isfile(match):
-                return match
+    # On Windows, executables may have .exe extension
+    if os.path.isfile(tool_path + ".exe"):
+        return tool_path + ".exe"
 
     return tool_path
 
