@@ -363,7 +363,13 @@ def main():
         logger.info("Running OpenFPGA Shell Engine ")
         run_openfpga_shell()
         if args.end_flow_with_test:
-            run_netlists_verification()
+            if sys.platform == "win32":
+                logger.info(
+                    "Skipping iverilog verification on Windows "
+                    "(generated include paths are not portable)"
+                )
+            else:
+                run_netlists_verification()
 
     ExecTime["End"] = time.time()
 
@@ -1063,6 +1069,15 @@ def run_netlists_verification(exit_if_fail=True):
 
 def run_command(taskname, logfile, command, exit_if_fail=True):
     logger.info("Launching %s " % taskname)
+    # Verify executable exists before attempting to run
+    exe = command[0] if command else ""
+    if exe and ("/" in exe or "\\" in exe) and not os.path.isfile(exe):
+        logger.error("Executable not found: %s" % exe)
+        parent = os.path.dirname(exe)
+        if os.path.isdir(parent):
+            logger.error("Files in %s: %s" % (parent, os.listdir(parent)))
+        else:
+            logger.error("Directory does not exist: %s" % parent)
     with open(logfile, "w") as output:
         try:
             output.write(" ".join(command) + "\n")

@@ -932,7 +932,7 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - name: basic_reg_test
+          - name: basic_reg_test_win
           - name: fpga_bitstream_reg_test
     steps:
       - name: Cancel previous
@@ -968,8 +968,26 @@ jobs:
       - name: Verify artifact layout
         run: |
           echo "=== Checking build/ directory ==="
-          ls -la build/ 2>/dev/null || echo "build/ does not exist!"
-          find build -maxdepth 3 -type f \( -name 'openfpga*' -o -name 'vpr*' -o -name 'yosys*' \) | sort || true
+          if [ -d build ]; then
+            echo "build/ exists"
+            echo "--- Key binaries ---"
+            for f in build/openfpga/openfpga build/openfpga/openfpga.exe \
+                     build/yosys/bin/yosys build/yosys/bin/yosys.exe \
+                     build/vtr-verilog-to-routing/vpr/vpr build/vtr-verilog-to-routing/vpr/vpr.exe \
+                     build/vtr-verilog-to-routing/ace2/ace build/vtr-verilog-to-routing/ace2/ace.exe; do
+              if [ -e "$f" ]; then
+                echo "  FOUND: $f ($(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null) bytes)"
+              else
+                echo "  MISSING: $f"
+              fi
+            done
+            echo "--- All executables ---"
+            find build -maxdepth 4 -type f \( -name '*.exe' -o -perm -111 \) 2>/dev/null | sort | head -n 50
+          else
+            echo "ERROR: build/ directory does NOT exist!"
+            echo "Listing workspace root:"
+            ls -la | head -n 30
+          fi
 
       - name: Set executable permissions
         run: |
