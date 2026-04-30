@@ -468,6 +468,11 @@ def resolve_executable_path(tool_path):
             matches = glob.glob(os.path.join(build_root, "**", name), recursive=True)
             if matches:
                 return matches[0]
+        # Prefix fallback (e.g. openfpga.exe, yosys-config.exe, versioned wrappers)
+        prefix_matches = glob.glob(os.path.join(build_root, "**", base_name + "*"), recursive=True)
+        for match in prefix_matches:
+            if os.path.isfile(match):
+                return match
 
     return tool_path
 

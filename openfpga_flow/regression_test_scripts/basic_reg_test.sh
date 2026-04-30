@@ -12,6 +12,17 @@ OPENFPGA_SHELL_BIN="${OPENFPGA_PATH}/build/openfpga/openfpga"
 if [ ! -e "${OPENFPGA_SHELL_BIN}" ] && [ -e "${OPENFPGA_SHELL_BIN}.exe" ]; then
   OPENFPGA_SHELL_BIN="${OPENFPGA_SHELL_BIN}.exe"
 fi
+
+if [ ! -e "${OPENFPGA_SHELL_BIN}" ]; then
+  OPENFPGA_SHELL_BIN=$(find "${OPENFPGA_PATH}/build" -type f \( -name 'openfpga' -o -name 'openfpga.exe' -o -name 'openfpga*' \) | head -n 1)
+fi
+
+if [ -z "${OPENFPGA_SHELL_BIN}" ] || [ ! -e "${OPENFPGA_SHELL_BIN}" ]; then
+  echo "Error: Cannot locate openfpga executable under ${OPENFPGA_PATH}/build"
+  find "${OPENFPGA_PATH}/build" -maxdepth 5 -type f | sort | head -n 200
+  exit 1
+fi
+
 ${OPENFPGA_SHELL_BIN} -x "version; exit;"
 if [ $? -ne 0 ]; then
   echo "Error: openfpgashell execution with -x option failed"
