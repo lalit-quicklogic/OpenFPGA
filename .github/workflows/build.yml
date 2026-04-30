@@ -363,6 +363,11 @@ jobs:
             fi
           done
 
+      - name: Debug downloaded build tree
+        run: |
+          echo "Listing candidate binaries under build/"
+          find build -maxdepth 4 -type f \( -name 'openfpga*' -o -name 'vpr*' -o -name 'ace*' -o -name 'yosys*' \) | sort || true
+
       - name: Install Python dependencies
         run: |
           python3 -m pip install --break-system-packages -r requirements.txt

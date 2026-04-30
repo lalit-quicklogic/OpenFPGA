@@ -9,7 +9,7 @@ echo -e "Basic regression tests";
 
 echo -e "Check if openfpgashell can execute commands with -x option"
 OPENFPGA_SHELL_BIN="${OPENFPGA_PATH}/build/openfpga/openfpga"
-if [ ! -x "${OPENFPGA_SHELL_BIN}" ] && [ -x "${OPENFPGA_SHELL_BIN}.exe" ]; then
+if [ ! -e "${OPENFPGA_SHELL_BIN}" ] && [ -e "${OPENFPGA_SHELL_BIN}.exe" ]; then
   OPENFPGA_SHELL_BIN="${OPENFPGA_SHELL_BIN}.exe"
 fi
 ${OPENFPGA_SHELL_BIN} -x "version; exit;"

@@ -436,6 +436,65 @@ def read_script_config(default_tool_path):
                 script_env_vars["PATH"].update(json.load(fp))
 
 
+def resolve_executable_path(tool_path):
+    """Best-effort resolver for tool executables across Linux/MSYS2 Windows.
+
+    Handles common Windows suffixes and artifact layout differences by probing
+    direct path variants and then searching under OPENFPGA build tree.
+    """
+    if not tool_path:
+        return tool_path
+
+    # Plain command names (e.g. "iverilog") should be resolved by PATH.
+    if "/" not in tool_path and "\\" not in tool_path:
+        return tool_path
+
+    candidates = [tool_path, tool_path + ".exe", tool_path + ".bat", tool_path + ".cmd"]
+    for candidate in candidates:
+        if os.path.isfile(candidate):
+            return candidate
+
+    base_dir = os.path.dirname(tool_path)
+    base_name = os.path.basename(tool_path)
+    if os.path.isdir(base_dir):
+        for candidate in glob.glob(os.path.join(base_dir, base_name + "*")):
+            if os.path.isfile(candidate):
+                return candidate
+
+    # Last resort: find matching binary anywhere under build/.
+    build_root = os.path.join(script_env_vars["PATH"]["OPENFPGA_PATH"], "build")
+    if os.path.isdir(build_root):
+        for name in (base_name, base_name + ".exe"):
+            matches = glob.glob(os.path.join(build_root, "**", name), recursive=True)
+            if matches:
+                return matches[0]
+
+    return tool_path
+
+
+def normalize_cad_tool_paths():
+    """Resolve executable paths in CAD_TOOLS_PATH to existing files."""
+    executable_keys = [
+        "openfpga_shell_path",
+        "yosys_path",
+        "odin2_path",
+        "abc_path",
+        "abc_mccl_path",
+        "abc_with_bb_support_path",
+        "vpr_path",
+        "ace_path",
+        "iverilog_path",
+    ]
+
+    for key in executable_keys:
+        if key not in cad_tools:
+            continue
+        resolved = resolve_executable_path(cad_tools[key])
+        if resolved != cad_tools[key]:
+            logger.info("Resolved %s: %s -> %s", key, cad_tools[key], resolved)
+            cad_tools[key] = resolved
+
+
 def validate_command_line_arguments():
     """
     This function validate the command line arguments
@@ -453,6 +512,7 @@ def validate_command_line_arguments():
     - Base verilog file
     """
     logger.info("Validating command line arguments")
+    normalize_cad_tool_paths()
 
     if args.debug:
         logger.info("Setting loggger in debug mode")
