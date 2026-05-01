@@ -393,7 +393,7 @@ def main():
         TimeInfo += (
             "Verification Time %s "
             % timestr(ExecTime["VerificationEnd"] - ExecTime["VerificationStart"])
-            if args.end_flow_with_test
+            if args.end_flow_with_test and "VerificationEnd" in ExecTime
             else ""
         )
     logger.info(TimeInfo)
