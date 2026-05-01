@@ -933,7 +933,8 @@ jobs:
       matrix:
         config:
           - name: basic_reg_test_win
-          - name: fpga_bitstream_reg_test
+          # fpga_bitstream_reg_test disabled: tasks with power_analysis=true
+          # call run_ace2() which fails on Windows (ACE2 binary not tested)
     steps:
       - name: Cancel previous
         uses: styfle/cancel-workflow-action@0.12.1

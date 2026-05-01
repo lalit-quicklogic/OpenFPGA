@@ -388,8 +388,9 @@ def main():
         TimeInfo = (
             "Openfpga_flow completed, "
             + "Total Time Taken %s " % timestr(ExecTime["End"] - ExecTime["Start"])
-            + "VPR Time %s " % timestr(ExecTime["VPREnd"] - ExecTime["VPRStart"])
         )
+        if "VPREnd" in ExecTime and "VPRStart" in ExecTime:
+            TimeInfo += "VPR Time %s " % timestr(ExecTime["VPREnd"] - ExecTime["VPRStart"])
         TimeInfo += (
             "Verification Time %s "
             % timestr(ExecTime["VerificationEnd"] - ExecTime["VerificationStart"])
@@ -1071,28 +1072,34 @@ def run_command(taskname, logfile, command, exit_if_fail=True):
     logger.info("Launching %s " % taskname)
     # Verify executable exists before attempting to run
     exe = command[0] if command else ""
-    if exe and ("/" in exe or "\\" in exe) and not os.path.isfile(exe):
-        logger.error("Executable not found: %s" % exe)
-        parent = os.path.dirname(exe)
-        if os.path.isdir(parent):
-            logger.error("Files in %s: %s" % (parent, os.listdir(parent)))
-        else:
-            logger.error("Directory does not exist: %s" % parent)
+    if exe and ("/" in exe or "\\" in exe):
+        if not os.path.isfile(exe) and not os.path.isfile(exe + ".exe"):
+            logger.error("Executable not found: %s" % exe)
+            parent = os.path.dirname(exe)
+            if os.path.isdir(parent):
+                logger.error("Files in %s: %s" % (parent, os.listdir(parent)))
+            else:
+                logger.error("Directory does not exist: %s" % parent)
     with open(logfile, "w") as output:
         try:
             output.write(" ".join(command) + "\n")
             process = subprocess.run(
                 command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=False
             )
-            output.write(process.stdout.decode("cp1252"))
-            output.write(process.stderr.decode("cp1252"))
+            stdout_text = process.stdout.decode("utf-8", errors="replace")
+            stderr_text = process.stderr.decode("utf-8", errors="replace")
+            output.write(stdout_text)
+            output.write(stderr_text)
             output.write(str(process.returncode))
             if "openfpgashell" in logfile:
-                filter_openfpga_output(process.stdout.decode("cp1252"))
+                filter_openfpga_output(stdout_text)
             if process.returncode:
                 logger.error("%s run failed with returncode %d" % (taskname, process.returncode))
                 logger.error("command %s" % " ".join(command))
-                filter_failed_process_output(process.stderr.decode("cp1252"))
+                logger.error("Current working directory : %s" % os.getcwd())
+                # Search both stderr and stdout for error messages
+                filter_failed_process_output(stderr_text)
+                filter_failed_process_output(stdout_text)
                 if exit_if_fail:
                     clean_up_and_exit("Failed to run %s task" % taskname)
         except Exception:
@@ -1101,7 +1108,7 @@ def run_command(taskname, logfile, command, exit_if_fail=True):
             if exit_if_fail:
                 clean_up_and_exit("Failed to run %s task" % taskname)
     logger.info("%s is written in file %s" % (taskname, logfile))
-    return process.stdout.decode("cp1252")
+    return stdout_text
 
 
 def filter_openfpga_output(vpr_output):
